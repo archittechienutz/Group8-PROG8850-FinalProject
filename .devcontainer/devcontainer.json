@@ -1,25 +1,29 @@
 {
-    // ...
-    "overrideCommand": true,
-    "runArgs": [
-        "--cap-add=SYS_PTRACE",
-        "--security-opt",
-        "seccomp=unconfined"
-    ],
-    "postCreateCommand": "pip3 install --user ansible",
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                "ms-azuretools.vscode-docker",
-                "streetsidesoftware.code-spell-checker",
-                "ms-python.autopep8",
-                "dbaeumer.vscode-eslint",
-                "ritwickdey.LiveServer",
-                "ms-python.vscode-pylance",
-                "ms-python.python",
-                "ms-python.debugpy"
-            ]
-        }
+  "name": "PROG8850 Codespace",
+  "overrideCommand": true,
+  "runArgs": [
+    "--cap-add=SYS_PTRACE",
+    "--security-opt",
+    "seccomp=unconfined"
+  ],
+  "forwardPorts": [3306, 8080],
+  "portsAttributes": {
+    "3306": { "label": "MySQL" },
+    "8080": { "label": "Adminer" }
+  },
+  "postCreateCommand": "bash -lc 'pip3 install --user ansible mysql-connector-python && sudo apt-get update && sudo apt-get install -y mysql-client'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-docker",
+        "streetsidesoftware.code-spell-checker",
+        "ms-python.autopep8",
+        "dbaeumer.vscode-eslint",
+        "ritwickdey.LiveServer",
+        "ms-python.vscode-pylance",
+        "ms-python.python",
+        "ms-python.debugpy"
+      ]
     }
-    // ...
   }
+}

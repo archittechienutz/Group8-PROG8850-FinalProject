@@ -1,0 +1,59 @@
+name: CI/CD MySQL (project_db)
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  db-pipeline:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -p${{ secrets.DB_PASSWORD }}"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client python3-pip
+          python3 -m pip install mysql-connector-python
+
+      - name: Wait for MySQL
+        run: |
+          for i in {1..30}; do
+            mysqladmin ping -h 127.0.0.1 -p"${{ secrets.DB_PASSWORD }}" && break
+            sleep 2
+          done
+
+      - name: Apply initial schema
+        run: mysql -h 127.0.0.1 -u root -p"${{ secrets.DB_PASSWORD }}" < sql/01_init_schema.sql
+
+      - name: Apply schema change (add humidity)
+        run: mysql -h 127.0.0.1 -u root -p"${{ secrets.DB_PASSWORD }}" < sql/02_add_humidity.sql
+
+      - name: Seed data
+        run: mysql -h 127.0.0.1 -u root -p"${{ secrets.DB_PASSWORD }}" < sql/03_seed_data.sql
+
+      - name: Run concurrent queries (Python)
+        env:
+          DB_HOST: 127.0.0.1
+          DB_ADMIN_USER: root
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: project_db
+        run: python3 scripts/multi_thread_queries.py
+
+      - name: Validate table + rowcount
+        run: |
+          mysql -h 127.0.0.1 -u root -p"${{ secrets.DB_PASSWORD }}" -e "USE project_db; DESCRIBE ClimateData;"
+          mysql -h 127.0.0.1 -u root -p"${{ secrets.DB_PASSWORD }}" -e "USE project_db; SELECT COUNT(*) AS total FROM ClimateData;"
